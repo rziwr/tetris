@@ -1,7 +1,8 @@
 TARGET = tetris
 CC = gcc
 
-OBJS = main.o
+OBJS = main.o \
+	game.o
 
 all : $(TARGET)
 	
@@ -10,3 +11,6 @@ $(TARGET): $(OBJS)
 
 %.o : %.c
 	$(CC) -c $< -o $@
+
+clean :
+	rm *.o $(TARGET)
