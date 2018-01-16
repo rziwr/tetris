@@ -1,6 +1,19 @@
 #include <stdio.h>
 #include <stdint.h>
+//#include <ncurses.h>
+#include <termios.h>
+#include <unistd.h>
 #include "config.h"
+
+struct {
+	int fig;
+	int x;
+	int y;
+} game_fig = {
+	.fig = 1,
+	.x = 2,
+	.y = FIELD_H + 2
+};
 
 static void clrscr (){
 	printf ("\033[2J");
@@ -18,6 +31,10 @@ void printScore (int score){
 }
 
 static void printField (){
+
+  printf("\e[?25l");
+  fflush(stdout);
+
   uint8_t i;
   uint8_t j;
   putchar ('\n');
@@ -110,6 +127,28 @@ NULL
 
 #define FIG_CNT (13)
 
+static void hide_figure (int fig, int x_pos, int y_pos) {
+	int ch = 0;
+	int x = x_pos;
+	int y = y_pos;
+	//setFieldPos (x, y);
+	while (*(figures [fig] + ch)){
+		if (*(figures [fig] + ch) == '\n'){
+			x++;
+			y = y_pos;
+			setFieldPos (x, y);
+			//ch++;
+		}
+		if (*(figures [fig] + ch) == 'o'){
+			y++;
+			setFieldPos (x, y);
+			putchar (' ');
+		}
+		//x++;
+		ch++;
+	}
+}
+
 static void show_figure (int fig, int x_pos, int y_pos) {
 	int ch = 0;
 	int x = x_pos;
@@ -117,36 +156,52 @@ static void show_figure (int fig, int x_pos, int y_pos) {
 	//setFieldPos (x, y);
 	while (*(figures [fig] + ch)){
 		if (*(figures [fig] + ch) == '\n'){
-			y++;
-			x = x_pos;
+			x++;
+			y = y_pos;
 			setFieldPos (x, y);
-			ch++;
+			//ch++;
 		}
 		if (*(figures [fig] + ch) == 'o'){
+			y++;
 			setFieldPos (x, y);
 			putchar ('o');
 		}
-		x++;
+		//x++;
 		ch++;
 	}
 }
 
-static void get_figure (){
-	int fignum = rand () % FIG_CNT;
-	show_figure ( fignum, 1, FIELD_W / 2);
+static int get_figure (){
+	static num;
+	//int fignum = rand () % FIG_CNT;
+	int fignum;
 
+	if (num >= FIG_CNT) {
+
+		num = 0;
+	}
+	fignum = num++;
+	show_figure (fignum, 1, FIELD_W / 2);
+	
 	//setFieldPos (1, FIELD_W/2);
 	
 	//printf ("%s", figures [fignum]);
+	return fignum;
 }
 
 int game_init (int with, int heght){
+	//noecho();
+    struct termios TermConf;
+    tcgetattr(STDIN_FILENO, &TermConf);
+    TermConf.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &TermConf);
+
 	clrscr ();
 	printField ();
 	printScore (0);
 }
 
-int timeout = 1000000;
+int game_delay = 1000000;
 
 
 typedef enum {
@@ -159,9 +214,13 @@ typedef enum {
 void game_tick (void){
 	static game_state_t state;
 	static int i;
+	static int cntr;
+	//static int fig;
 	int res = 0;
 	char c;
-	printf (" %d\n", i++);
+	
+	//printf (" %d\n", state);
+	/*
 	res = fread  ( &c, 1, 1, stdin);
 	if (res > 0) {
 		putchar (c);
@@ -169,22 +228,38 @@ void game_tick (void){
 		printf ("FIG_CNT: %d\n", FIG_CNT);
 	}
 	fflush (stdout);
-
+*/
 	switch (state){
 		case GAME_NEXT_FIG:
-			get_figure ();
+
+/*			setFieldPos (10, 10);
+			putchar ('+');
+			setFieldPos (20, 10);
+			putchar ('+');
+			setFieldPos (30, 10);
+			putchar ('+');
+			setFieldPos (40, 40);
+			putchar ('+');			*/
+			game_fig.fig = get_figure ();
 			state = GAME_IDLE;
+	//		printf ("GAME_NEXT_FIG \n");
 			break;
 		case GAME_IDLE:
-
+			cntr++;
+			if (cntr >= 2){
+				hide_figure (game_fig.fig, 1, FIELD_W / 2);
+				state = GAME_NEXT_FIG;
+				cntr = 0;
+			}
 			break;
 		default:
 			state = GAME_NEXT_FIG;
 			break;
 	}
+	fflush (stdout);
 }
 
 
 void game_sleep (void){
-	usleep (timeout);
+	usleep (game_delay);
 }

@@ -7,7 +7,7 @@ OBJS = main.o \
 all : $(TARGET)
 	
 $(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $(TARGET)
+	$(CC) $(OBJS) -o $(TARGET) #-lncurces
 
 %.o : %.c
 	$(CC) -c $< -o $@
