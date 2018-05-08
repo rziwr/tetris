@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <termios.h>
 #include "config.h"
+
+static int game_stop = 0;
 
 static void clrscr (){
 	printf ("\033[2J");
@@ -140,7 +144,18 @@ static void get_figure (){
 	//printf ("%s", figures [fignum]);
 }
 
+struct termios term_old, term_new;
+
 int game_init (int with, int heght){
+	
+	
+	tcgetattr (0, &term_old);
+	term_new = term_old;
+	term_new.c_lflag &= ~(ICANON | ECHO | ISIG);
+	term_new.c_cc[VMIN] = 0;
+	term_new.c_cc[VTIME] = 0;	
+	tcsetattr(0, TCSANOW, &term_new);	
+	
 	clrscr ();
 	printField ();
 	printScore (0);
@@ -155,18 +170,25 @@ typedef enum {
 	GAME_PAUSE,
 	GAME_FAIL
 } game_state_t;
-
+	
 void game_tick (void){
 	static game_state_t state;
 	static int i;
 	int res = 0;
 	char c;
 	printf (" %d\n", i++);
-	res = fread  ( &c, 1, 1, stdin);
+	//res = fread ( &c, 1, 1, stdin);
+	res = getchar ();
 	if (res > 0) {
-		putchar (c);
-		printf ("Res: %d\n", res);
-		printf ("FIG_CNT: %d\n", FIG_CNT);
+		if (res == 'q'){
+			game_stop = 1;
+			tcsetattr(0, TCSANOW, &term_old);
+			clrscr ();
+			setFieldPos (1, 1);
+		}	
+		//putchar (c);
+		//printf ("Res: %d\n", res);
+		//printf ("FIG_CNT: %d\n", FIG_CNT);
 	}
 	fflush (stdout);
 
@@ -187,4 +209,8 @@ void game_tick (void){
 
 void game_sleep (void){
 	usleep (timeout);
+}
+
+int game_is_stopped (void){
+	return game_stop;
 }
