@@ -42,8 +42,9 @@ static void printField (){
   putchar ('\n');
 }
 
+static char field [FIELD_W][FIELD_H];
 
-char * figures [] = {
+static const char * figures [] = {
 "\
 o   \n\
 o   \n\
@@ -124,8 +125,8 @@ static void show_figure (int fig, int x_pos, int y_pos) {
 	//setFieldPos (x, y);
 	while (*(figures [fig] + ch)){
 		if (*(figures [fig] + ch) == '\n'){
-			y++;
-			x = x_pos;
+			x++;
+			y = y_pos;
 			//setFieldPos (x, y);
 			ch++;
 		}
@@ -133,7 +134,7 @@ static void show_figure (int fig, int x_pos, int y_pos) {
 			setFieldPos (x, y);
 			putchar ('o');
 		}
-		x++;
+		y++;
 		ch++;
 	}
 }
@@ -145,8 +146,8 @@ static void hide_figure (int fig, int x_pos, int y_pos) {
 	//setFieldPos (x, y);
 	while (*(figures [fig] + ch)){
 		if (*(figures [fig] + ch) == '\n'){
-			y++;
-			x = x_pos;
+			x++;
+			y = y_pos;
 			//setFieldPos (x, y);
 			ch++;
 		}
@@ -154,15 +155,18 @@ static void hide_figure (int fig, int x_pos, int y_pos) {
 			setFieldPos (x, y);
 			putchar (' ');
 		}
-		x++;
+		y++;
 		ch++;
 	}
 }
 
 static int get_figure (){
-	int fignum = rand () % FIG_CNT;
-	show_figure ( fignum, 1, FIELD_W / 2);
+	int fignum;
+	fignum = rand () % FIG_CNT;
+	show_figure ( fignum, 3, FIELD_W / 2);
 
+	X = 3;
+	Y = FIELD_W / 2;	
 	//setFieldPos (1, FIELD_W/2);
 	
 	//printf ("%s", figures [fignum]);
@@ -193,6 +197,11 @@ int game_init (int with, int heght){
 	clrscr ();
 	printField ();
 	printScore (0);
+	
+	int i, j;
+	for (i = 0; i < FIELD_W; i++)
+		for (j = 0; j < FIELD_H; j++)
+			field [i][j] = ' ';
 }
 
 int timeout = 1000000;
@@ -230,8 +239,7 @@ void game_tick (void){
 		case GAME_NEXT_FIG:
 			falling_figure = get_figure ();
 			state = GAME_FIG_FALL;
-			X = 1;
-			Y = FIELD_W / 2;
+
 			break;
 		case GAME_IDLE:
 			hide_figure (falling_figure, 1, FIELD_W / 2);
