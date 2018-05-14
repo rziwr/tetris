@@ -26,8 +26,8 @@ static void printField (){
   uint8_t j;
   putchar ('\n');
   // Печать вершины
-  for (i = 0; i < FIELD_W; i++)
-    putchar ('=');
+//  for (i = 0; i < FIELD_W; i++)
+//    putchar ('=');
   putchar ('\n');
   // Печать поля
   for (i = 0; i < FIELD_H - 2; i++){
@@ -48,71 +48,74 @@ char * figures [] = {
 o   \n\
 o   \n\
 o   \n\
-o   \n",
+o   \n\0",
 "\
     \n\
     \n\
     \n\
-oooo\n",
+oooo\n\0",
 "\
     \n\
     \n\
 oo  \n\
-oo  \n",
+oo  \n\0",
 "\
     \n\
     \n\
  o  \n\
-ooo \n",
+ooo \n\0",
 "\
     \n\
 o   \n\
 oo  \n\
-o   \n",
+o   \n\0",
 "\
     \n\
     \n\
 ooo \n\
- o  \n",
+ o  \n\0",
 "\
     \n\
   o \n\
  oo \n\
-  o \n",
+  o \n\0",
 "\
     \n\
     \n\
  o  \n\
-ooo \n",
+ooo \n\0",
 "\
     \n\
 o   \n\
 o   \n\
-oo  \n",
+oo  \n\0",
 "\
     \n\
     \n\
 ooo \n\
-o   \n",
+o   \n\0",
 "\
     \n\
 oo  \n\
  o  \n\
- o  \n",
+ o  \n\0",
 "\
     \n\
     \n\
   o \n\
-ooo \n",
+ooo \n\0",
 "\
     \n\
 o   \n\
 o   \n\
-oo  \n",
+oo  \n\0",
 NULL
 };
 
 #define FIG_CNT (13)
+
+static int falling_figure;
+static int X, Y;
 
 static void show_figure (int fig, int x_pos, int y_pos) {
 	int ch = 0;
@@ -123,7 +126,7 @@ static void show_figure (int fig, int x_pos, int y_pos) {
 		if (*(figures [fig] + ch) == '\n'){
 			y++;
 			x = x_pos;
-			setFieldPos (x, y);
+			//setFieldPos (x, y);
 			ch++;
 		}
 		if (*(figures [fig] + ch) == 'o'){
@@ -135,19 +138,50 @@ static void show_figure (int fig, int x_pos, int y_pos) {
 	}
 }
 
-static void get_figure (){
+static void hide_figure (int fig, int x_pos, int y_pos) {
+	int ch = 0;
+	int x = x_pos;
+	int y = y_pos;
+	//setFieldPos (x, y);
+	while (*(figures [fig] + ch)){
+		if (*(figures [fig] + ch) == '\n'){
+			y++;
+			x = x_pos;
+			//setFieldPos (x, y);
+			ch++;
+		}
+		if (*(figures [fig] + ch) == 'o'){
+			setFieldPos (x, y);
+			putchar (' ');
+		}
+		x++;
+		ch++;
+	}
+}
+
+static int get_figure (){
 	int fignum = rand () % FIG_CNT;
 	show_figure ( fignum, 1, FIELD_W / 2);
 
 	//setFieldPos (1, FIELD_W/2);
 	
 	//printf ("%s", figures [fignum]);
+	return fignum;
+}
+
+int fig_falled (void){
+	static int i;
+	
+	if (i++ >= 4){
+		i = 0;
+		return 1;
+	} else return 0;
+	
 }
 
 struct termios term_old, term_new;
 
-int game_init (int with, int heght){
-	
+int game_init (int with, int heght){	
 	
 	tcgetattr (0, &term_old);
 	term_new = term_old;
@@ -163,9 +197,9 @@ int game_init (int with, int heght){
 
 int timeout = 1000000;
 
-
 typedef enum {
 	GAME_NEXT_FIG = 0,
+	GAME_FIG_FALL,
 	GAME_IDLE,
 	GAME_PAUSE,
 	GAME_FAIL
@@ -176,7 +210,7 @@ void game_tick (void){
 	static int i;
 	int res = 0;
 	char c;
-	printf (" %d\n", i++);
+	//printf (" %d\n", i++);
 	//res = fread ( &c, 1, 1, stdin);
 	res = getchar ();
 	if (res > 0) {
@@ -190,22 +224,32 @@ void game_tick (void){
 		//printf ("Res: %d\n", res);
 		//printf ("FIG_CNT: %d\n", FIG_CNT);
 	}
-	fflush (stdout);
+	//fflush (stdout);
 
 	switch (state){
 		case GAME_NEXT_FIG:
-			get_figure ();
-			state = GAME_IDLE;
+			falling_figure = get_figure ();
+			state = GAME_FIG_FALL;
+			X = 1;
+			Y = FIELD_W / 2;
 			break;
 		case GAME_IDLE:
-
+			hide_figure (falling_figure, 1, FIELD_W / 2);
+			state = GAME_NEXT_FIG;
+			break;
+			
+		case GAME_FIG_FALL:
+			hide_figure (falling_figure, X, Y);
+			X++;
+			show_figure (falling_figure, X, Y);
+			if (fig_falled ())
+				state = GAME_NEXT_FIG;
 			break;
 		default:
 			state = GAME_NEXT_FIG;
 			break;
 	}
 }
-
 
 void game_sleep (void){
 	usleep (timeout);
