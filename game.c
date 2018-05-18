@@ -174,13 +174,36 @@ static int get_figure (){
 }
 
 int fig_falled (void){
-	static int i;
+	int i;
 	
-	if (i++ >= 4){
-		i = 0;
+	if (X >= (FIELD_H + 1))
 		return 1;
-	} else return 0;
 	
+	for (i = 0; i < 4; i++)
+		if ((field [X+i][Y+1] == 'o') && (*(figures [falling_figure] + i) == 'o'))
+			return 1;
+	
+	return 0;
+	
+}
+
+void add_to_field (void){
+	int i,j;
+	int x = X, y = Y, ch = 0, fig = falling_figure;
+//	for (i = 0; i < 4; i++)
+	while (*(figures [fig] + ch)){
+		if (*(figures [fig] + ch) == '\n'){
+			x++;
+			y = Y;
+			//setFieldPos (x, y);
+			ch++;
+		}
+		if (*(figures [fig] + ch) == 'o'){
+			field [x][y] = 'o';
+		}
+		y++;
+		ch++;
+	}
 }
 
 struct termios term_old, term_new;
@@ -250,8 +273,10 @@ void game_tick (void){
 			hide_figure (falling_figure, X, Y);
 			X++;
 			show_figure (falling_figure, X, Y);
-			if (fig_falled ())
+			if (fig_falled ()){
 				state = GAME_NEXT_FIG;
+				add_to_field ();
+			}
 			break;
 		default:
 			state = GAME_NEXT_FIG;
